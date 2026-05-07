@@ -1,14 +1,18 @@
 package com.tradeflow.entity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name="counter_party")
 public class CounterParty {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,6 +74,13 @@ public class CounterParty {
 	public String toString() {
 		return "CounterParty [id=" + id + ", lei=" + lei + ", name=" + name + ", createdAt=" + createdAt + "]";
 	}
+	
+//	@OneToMany(mappedBy = "buyer")
+//	private List<Trade> buyTrades;
+//	
+//	@OneToMany(mappedBy = "seller")
+//	private List<Trade> sellTrades;
+	
 	
 	
 
