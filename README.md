@@ -1191,8 +1191,7 @@ CounterPartyResponse DTO
 InstrumentResponse DTO
 TradeResponse DTO
 
-````md
----
+````
 
 # 24. TradeMapper
 
