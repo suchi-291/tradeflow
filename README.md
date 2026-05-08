@@ -1203,6 +1203,637 @@ Build POST /trades
 ```
 
 
+Continue your README from this point onward. Existing content is in your uploaded markdown file. 
+
+````md
+---
+
+# 24. TradeMapper
+
+After creating DTOs, the next challenge was:
+
+```text
+How do we convert Trade entity into TradeResponse DTO?
+````
+
+For this purpose, a separate mapper layer was introduced.
+
+---
+
+## 24.1 Why Mapper Layer Was Needed
+
+The `Trade` entity contains:
+
+```java
+private CounterParty buyer;
+private CounterParty seller;
+private Instrument instrument;
+```
+
+But API response should return:
+
+```json
+{
+  "buyer": {
+    "id": 1,
+    "name": "HDFC Bank"
+  }
+}
+```
+
+This means entity objects must be converted into response DTOs.
+
+That conversion logic was separated into:
+
+```text
+TradeMapper
+```
+
+This keeps:
+
+* controller clean
+* service clean
+* conversion logic centralized
+
+---
+
+## 24.2 TradeMapper Implementation
+
+```java
+@Component
+public class TradeMapper {
+
+    public TradeResponse toTradeResponse(Trade trade) {
+
+        CounterPartyResponse buyerResponse =
+                toCounterPartyResponse(trade.getBuyer());
+
+        CounterPartyResponse sellerResponse =
+                toCounterPartyResponse(trade.getSeller());
+
+        InstrumentResponse instrumentResponse =
+                toInstrumentResponse(trade.getInstrument());
+
+        return new TradeResponse(
+                trade.getId(),
+                buyerResponse,
+                sellerResponse,
+                instrumentResponse,
+                trade.getTradeDate(),
+                trade.getSettlementDate(),
+                trade.getQuantity(),
+                trade.getPrice(),
+                trade.getStatus(),
+                trade.getVersion(),
+                trade.getCreatedAt(),
+                trade.getUpdatedAt()
+        );
+    }
+}
+```
+
+---
+
+## 24.3 Nested DTO Conversion
+
+Trade response contains nested DTOs.
+
+Example:
+
+```json
+{
+  "buyer": {
+    "id": 1,
+    "name": "HDFC Bank"
+  }
+}
+```
+
+To support this, helper methods were created:
+
+```java
+private CounterPartyResponse toCounterPartyResponse(...)
+```
+
+and
+
+```java
+private InstrumentResponse toInstrumentResponse(...)
+```
+
+This creates reusable conversion logic.
+
+---
+
+# 25. Repository Layer
+
+Repositories were introduced for database access.
+
+---
+
+## 25.1 TradeRepository
+
+```java
+public interface TradeRepository
+        extends JpaRepository<Trade, Long> {
+}
+```
+
+---
+
+## 25.2 Purpose of Repository Layer
+
+Repository layer abstracts database operations.
+
+Spring Data JPA automatically provides:
+
+```text
+save()
+findById()
+findAll()
+deleteById()
+```
+
+without writing SQL queries manually.
+
+---
+
+# 26. Service Layer
+
+The service layer contains business logic.
+
+This is the most important layer in enterprise backend applications.
+
+---
+
+# 26.1 Why Service Layer Was Needed
+
+The request DTO contains only IDs:
+
+```json
+{
+  "buyerId": 1,
+  "sellerId": 2
+}
+```
+
+But the Trade entity expects:
+
+```java
+private CounterParty buyer;
+private CounterParty seller;
+```
+
+So the service layer performs:
+
+```text
+ID → Entity Object conversion
+```
+
+---
+
+# 26.2 Trade Creation Workflow
+
+The workflow implemented in the service layer is:
+
+```text
+Receive TradeCreateRequest
+↓
+Fetch buyer from DB
+↓
+Fetch seller from DB
+↓
+Fetch instrument from DB
+↓
+Create Trade entity
+↓
+Set entity relationships
+↓
+Save Trade
+↓
+Convert entity to TradeResponse
+```
+
+---
+
+# 26.3 Fetching Buyer Entity
+
+```java
+CounterParty buyer =
+    counterPartyRepository
+        .findById(request.getBuyerId())
+        .orElseThrow();
+```
+
+This fetches the buyer object from the database.
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM counter_party WHERE id = 1;
+```
+
+---
+
+# 26.4 Fetching Seller Entity
+
+```java
+CounterParty seller =
+    counterPartyRepository
+        .findById(request.getSellerId())
+        .orElseThrow();
+```
+
+---
+
+# 26.5 Fetching Instrument Entity
+
+```java
+Instrument instrument =
+    instrumentRepository
+        .findById(request.getInstrumentId())
+        .orElseThrow();
+```
+
+---
+
+# 26.6 Creating Trade Entity
+
+```java
+Trade trade = new Trade();
+```
+
+The trade object is then populated using request data.
+
+---
+
+## Relationship Assignment
+
+```java
+trade.setBuyer(buyer);
+trade.setSeller(seller);
+trade.setInstrument(instrument);
+```
+
+This is where JPA relationships become important.
+
+Even though database stores:
+
+```text
+buyer_id
+seller_id
+instrument_id
+```
+
+Java works entirely with objects.
+
+Hibernate internally extracts IDs while saving.
+
+---
+
+# 26.7 Saving Trade
+
+```java
+Trade savedTrade =
+        tradeRepository.save(trade);
+```
+
+Hibernate internally generates SQL INSERT statement.
+
+---
+
+# 26.8 Returning Response DTO
+
+```java
+return tradeMapper.toTradeResponse(savedTrade);
+```
+
+The mapper converts entity into clean API response.
+
+---
+
+# 27. Controller Layer
+
+The controller layer handles HTTP requests.
+
+---
+
+# 27.1 TradeController
+
+```java
+@RestController
+public class TradeController {
+}
+```
+
+---
+
+## POST API
+
+```java
+@PostMapping("/trades")
+```
+
+This endpoint accepts trade creation requests.
+
+---
+
+# 27.2 Request Flow
+
+```text
+Postman JSON
+↓
+TradeCreateRequest DTO
+↓
+TradeService
+↓
+TradeRepository
+↓
+Database
+```
+
+---
+
+# 27.3 Response Flow
+
+```text
+Database
+↓
+Trade Entity
+↓
+TradeMapper
+↓
+TradeResponse DTO
+↓
+Postman Response
+```
+
+---
+
+# 28. Structured API Response
+
+The API now returns nested structured JSON.
+
+Example:
+
+```json
+{
+  "id": 1,
+  "buyer": {
+    "id": 1,
+    "lei": "LEI001",
+    "name": "HDFC Bank"
+  },
+  "seller": {
+    "id": 2,
+    "lei": "LEI002",
+    "name": "ICICI Bank"
+  },
+  "instrument": {
+    "id": 1,
+    "isin": "INE002A01018",
+    "type": "EQUITY",
+    "currency": "INR"
+  },
+  "tradeDate": "2026-05-07",
+  "settlementDate": "2026-05-09",
+  "quantity": 1000,
+  "price": 250.50,
+  "status": "NEW"
+}
+```
+
+---
+
+# 29. Derived Query Methods
+
+Spring Data JPA allows query generation from method names.
+
+---
+
+## 29.1 Find Trades by Status
+
+```java
+List<Trade> findByStatus(TradeStatus status);
+```
+
+Spring automatically generates SQL query equivalent to:
+
+```sql
+SELECT * FROM trade WHERE status = ?;
+```
+
+No manual query writing required.
+
+---
+
+# 30. Streams API
+
+Java Streams were introduced while converting entity lists into DTO lists.
+
+---
+
+## 30.1 Stream Mapping
+
+```java
+return trades.stream()
+        .map(tradeMapper::toTradeResponse)
+        .toList();
+```
+
+---
+
+## 30.2 Meaning
+
+```text
+Take each Trade entity
+↓
+Convert into TradeResponse DTO
+↓
+Collect into List
+```
+
+Equivalent traditional loop:
+
+```java
+List<TradeResponse> responses = new ArrayList<>();
+
+for (Trade trade : trades) {
+    responses.add(tradeMapper.toTradeResponse(trade));
+}
+```
+
+Streams provide cleaner functional-style code.
+
+---
+
+# 31. Query Parameters
+
+The following endpoint was implemented:
+
+```http
+GET /trades/by-status?status=NEW
+```
+
+---
+
+## 31.1 RequestParam
+
+```java
+@RequestParam TradeStatus status
+```
+
+Spring automatically converts:
+
+```text
+NEW
+```
+
+into:
+
+```java
+TradeStatus.NEW
+```
+
+because status is enum.
+
+---
+
+# 32. APIs Implemented
+
+---
+
+## CounterParty APIs
+
+```http
+POST /counterparties
+GET /counterparties
+GET /counterparties/{id}
+```
+
+---
+
+## Instrument APIs
+
+```http
+POST /instruments
+GET /instruments
+GET /instruments/{id}
+```
+
+---
+
+## Trade APIs
+
+```http
+POST /trades
+GET /trades/by-status?status=NEW
+```
+
+---
+
+# 33. Key Concepts Learned
+
+The following enterprise backend concepts were implemented and understood during Day 2:
+
+* JPA entity relationships
+* Many-to-One mapping
+* Foreign keys
+* Lazy fetching
+* DTO architecture
+* Mapper pattern
+* Repository abstraction
+* Service-layer business logic
+* Audit fields
+* Enums
+* Versioning
+* Streams API
+* Derived query methods
+* Query parameters
+* Layered architecture
+
+---
+
+# 34. Final Architecture
+
+```text
+Controller
+↓
+Service
+↓
+Repository
+↓
+Database
+```
+
+---
+
+# 35. DTO Flow Summary
+
+```text
+Postman Request
+↓
+TradeCreateRequest DTO
+↓
+Service Layer
+↓
+Trade Entity
+↓
+Database
+↓
+TradeMapper
+↓
+TradeResponse DTO
+↓
+Postman Response
+```
+
+---
+
+# 36. Enterprise Design Principles Applied
+
+| Principle            | Purpose                  |
+| -------------------- | ------------------------ |
+| Layered Architecture | Separation of concerns   |
+| DTO Pattern          | Clean API contracts      |
+| Repository Pattern   | Abstract DB access       |
+| Mapper Pattern       | Entity/DTO conversion    |
+| Enum Usage           | Controlled values        |
+| Audit Fields         | Record tracking          |
+| Versioning           | Concurrency safety       |
+| Lazy Loading         | Performance optimization |
+
+---
+
+# 37. Current Project Status
+
+Completed:
+
+* Counterparty module
+* Instrument module
+* Trade module
+* Entity relationships
+* DTO architecture
+* Mapper layer
+* Trade creation workflow
+* Trade filtering by status
+
+Upcoming:
+
+* Exception handling
+* Validation
+* Structured error responses
+* Trade lifecycle transitions
+* Logging
+* Global exception handling
+* Advanced querying
+
+---
+
+```
+```
+
+
 
 ## Author
 
