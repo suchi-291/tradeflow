@@ -3,6 +3,8 @@ package com.tradeflow.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+//Your Trade entity has: private CounterParty buyer; private CounterParty seller; private Instrument instrument; But Postman cannot comfortably send full objects. So we create a request DTO. This class represents: What user sends while creating a trade. It does not contain: id,status, version, createdAt, updatedAt, because system/database controls those. DTO means: A class used only for API input/output.
+
 public class TradeCreateRequest {
 
 	private Long buyerId;

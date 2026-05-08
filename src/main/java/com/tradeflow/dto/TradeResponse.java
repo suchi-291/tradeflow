@@ -5,6 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.tradeflow.enums.TradeStatus;
+//After trade is saved, we want to return clean output.We do not want to return raw entity because entity may contain lazy-loaded objects, unwanted fields, or internal database structure.
+// This is what backend returns after creating a trade.
+// It combines: Trade basic fields, Buyer details, Seller details, Instrument details, System-generated fields
 
 public class TradeResponse {
 	

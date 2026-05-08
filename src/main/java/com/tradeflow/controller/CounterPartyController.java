@@ -38,5 +38,7 @@ public class CounterPartyController {
 		return counterPartyService.getCounterPartyById(id);
 	}
 	
+	
+	
 
 }

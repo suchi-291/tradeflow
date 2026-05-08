@@ -1,6 +1,7 @@
 package com.tradeflow.dto;
 
 import com.tradeflow.enums.InstrumentType;
+//After trade is saved, we want to return clean output.We do not want to return raw entity because entity may contain lazy-loaded objects, unwanted fields, or internal database structure.
 
 public class InstrumentResponse {
 	
