@@ -1190,20 +1190,6 @@ TradeCreateRequest DTO
 CounterPartyResponse DTO
 InstrumentResponse DTO
 TradeResponse DTO
-```
-
-Next step:
-
-```text
-Create TradeMapper
-Create TradeRepository
-Create TradeService
-Create TradeController
-Build POST /trades
-```
-
-
-Continue your README from this point onward. Existing content is in your uploaded markdown file. 
 
 ````md
 ---
